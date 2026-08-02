@@ -1,0 +1,673 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "13Tc5k4v9GZHylTWoI4BH-2HDiiF5nh0Ra7lh_lA8yBw",
+          "cachedResultName": "test 1"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1151399337",
+          "cachedResultName": "Form responses 1"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "id": "02464aee-fd6f-4403-8ab0-e4a2d1cd6368",
+      "name": "New Feedback Row",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        288
+      ],
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "rH84TzIfS3zhjSBM",
+          "name": "Google Sheets Trigger account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Feedback to analyze:\nName: {{ $json[\"Name ( Please enter your name correctly, as the same will be printed on the certificate.}\"] }}\nFavorite Part: {{ $json[\"What was your favorite part of the event ?\"] }}\nExcitement Level: {{ $json[\"How much excited are you to participate in our upcoming events ?\"] }}\nOne Word: {{ $json[\"Any one word to describe your experience of Webinar ?\"] }}\nOverall Rating: {{ $json[\"How would you rate today's event overall?\"] }}\nEngagement Rating: {{ $json[\"Did you feel engaged and involved throughout the event ?\"] }}\nCoordination Rating: {{ $json[\"How would you rate the event management and coordination?\"] }}\nSuggested Improvements: {{ $json[\"Improvement you want to see in upcoming events?\"] }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are an event-feedback analyst for a college tech event run by CMPICA, CHARUSAT University. You analyze ONE student's feedback response at a time and return ONLY the structured JSON defined by the output schema — no preamble, no markdown, no extra text outside the JSON.\n\nCONTEXT FOR JUDGMENT:\n- Students often mis-score the numeric ratings out of habit (e.g. giving 4/5 while writing a clearly frustrated comment, or 5/5 with a flat one-word answer). Always weigh the written sentiment more heavily than the raw numbers — the numbers are a weak signal, the words are the real signal.\n- If a field is blank, says \"None\", or is otherwise empty, ignore it entirely — do not treat a missing field as negative or let it drag sentiment down. Base your read only on the content that's actually present.\n- If almost every field is empty or the response is just a single low-effort word with nothing else, treat it as Neutral / Low priority rather than guessing at intent.\n- This output will appear as one compact line in a digest email read by a busy event coordinator alongside dozens of others — keep \"key_insight\" and \"recommendation\" to one short, concrete sentence each. No filler phrases like \"overall\" or \"it seems.\"\n- Do not invent details the student didn't say. If they only gave a rating with no comments, key_insight should reflect that sparse input rather than fabricating reasoning.\n\nCLASSIFICATION RULES:\n- sentiment: \"Positive\", \"Negative\", or \"Neutral\"\n  - Positive = genuine praise or enthusiasm in their words\n  - Negative = clear frustration, disappointment, or a real complaint\n  - Neutral = mixed, indifferent, or too sparse to tell\n- emotion: the single dominant emotion in one word (e.g. excitement, frustration, gratitude, indifference, confusion, disappointment, satisfaction)\n- key_insight: the one most important takeaway a coordinator needs to know, one sentence, plain language\n- priority:\n  - Critical = a serious, actionable problem needing same-day attention (e.g. something broken, unsafe, or badly mismanaged)\n  - High = a real actionable issue, but not urgent (e.g. clear improvement suggestion, recurring complaint)\n  - Medium = minor friction, a small suggestion, or mildly lukewarm feedback\n  - Low = glowing praise or trivial input with nothing actionable\n- recommendation: one concrete next step the coordinator could actually take, one sentence. If nothing needs doing, say so plainly (e.g. \"No action needed — share as positive feedback.\")\n- testimonial: ONLY if sentiment is \"Positive\", write a short, natural-sounding quote (under 25 words) that could be used in marketing, staying true to what the student actually said and their tone — do not overwrite it into generic marketing-speak. If sentiment is not Positive, return an empty string \"\".\n\nReturn valid JSON matching the schema exactly. Do not add fields. Do not wrap the JSON in code fences."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "id": "db092196-bdaa-4a60-9ff5-cf823c5f802d",
+      "name": "Analyze Feedback",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        224,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-6",
+          "cachedResultName": "Claude Sonnet 4.6"
+        },
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "e70a546a-5378-4dd2-8f14-ff44ffb5a30f",
+      "name": "Anthropic Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        240,
+        512
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\"type\":\"object\",\"properties\":{\"sentiment\":{\"type\":\"string\",\"enum\":[\"Positive\",\"Negative\",\"Neutral\"]},\"emotion\":{\"type\":\"string\"},\"key_insight\":{\"type\":\"string\"},\"priority\":{\"type\":\"string\",\"enum\":[\"Critical\",\"High\",\"Medium\",\"Low\"]},\"recommendation\":{\"type\":\"string\"},\"testimonial\":{\"type\":\"string\"}},\"required\":[\"sentiment\",\"emotion\",\"key_insight\",\"priority\",\"recommendation\",\"testimonial\"],\"additionalProperties\":false}"
+      },
+      "id": "db464f1e-10d8-4872-968d-4825a4dfe494",
+      "name": "Feedback Schema",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        368,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const src = $('New Feedback Row').item.json;\nconst out = $json.output || {};\nreturn {\n  timestamp: src[\"Timestamp\"] || \"\",\n  name: src[\"Name ( Please enter your name correctly, as the same will be printed on the certificate.}\"] || \"\",\n  email: src[\"Collage Email ID \"] || \"\",\n  department: src[\"Department\"] || \"\",\n  favoritePart: src[\"What was your favorite part of the event ?\"] || \"\",\n  excitement: src[\"How much excited are you to participate in our upcoming events ?\"] || \"\",\n  oneWord: src[\"Any one word to describe your experience of Webinar ?\"] || \"\",\n  overallRating: src[\"How would you rate today's event overall?\"] ?? \"\",\n  engagementRating: src[\"Did you feel engaged and involved throughout the event ?\"] ?? \"\",\n  coordinationRating: src[\"How would you rate the event management and coordination?\"] ?? \"\",\n  improvements: src[\"Improvement you want to see in upcoming events?\"] || \"\",\n  sentiment: out.sentiment || \"\",\n  emotion: out.emotion || \"\",\n  key_insight: out.key_insight || \"\",\n  priority: out.priority || \"\",\n  recommendation: out.recommendation || \"\",\n  testimonial: out.testimonial || \"\",\n};"
+      },
+      "id": "3dc5a78b-cc19-4e87-a32e-139481a3a329",
+      "name": "Combine Analysis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        576,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "not-low",
+              "leftValue": "={{ $json.priority }}",
+              "rightValue": "Low",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "43daf207-1f30-404f-af1b-d2f67a5cf60c",
+      "name": "Actionable (not Low)",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        800,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "arunbhutiya270@gmail.com",
+        "subject": "=Feedback [{{ $json.priority }}] — {{ $json.name }} ({{ $json.sentiment }})",
+        "message": "=<h3>Feedback Analysis</h3>\n<p><b>Student:</b> {{ $json.name }}</p>\n<p><b>Sentiment:</b> {{ $json.sentiment }} &nbsp; | &nbsp; <b>Emotion:</b> {{ $json.emotion }} &nbsp; | &nbsp; <b>Priority:</b> {{ $json.priority }}</p>\n<p><b>Key insight:</b> {{ $json.key_insight }}</p>\n<p><b>Recommendation:</b> {{ $json.recommendation }}</p>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "068940f9-fe59-4ea1-9752-b7f57b63bc73",
+      "name": "Send Alert Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1024,
+        0
+      ],
+      "webhookId": "d87d1c21-6c8c-4e07-a092-4ce7a0ba3fac",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "2Dqc0ESiwaOoiHOd",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "is-positive",
+              "leftValue": "={{ $json.sentiment }}",
+              "rightValue": "Positive",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a89e72d-4f68-44ae-a5c2-32e0743e2602",
+      "name": "Positive Reviews",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        800,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "is-negative",
+              "leftValue": "={{ $json.sentiment }}",
+              "rightValue": "Negative",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b9721c82-a0be-491b-9303-1b578617837b",
+      "name": "Negative Reviews",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        800,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1sR3GSXbvA0Vtgcz9LjshDTI7_bhY4cg__Pr0fWyWK-U",
+          "mode": "list",
+          "cachedResultName": "Coordinator Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sR3GSXbvA0Vtgcz9LjshDTI7_bhY4cg__Pr0fWyWK-U/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sR3GSXbvA0Vtgcz9LjshDTI7_bhY4cg__Pr0fWyWK-U/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $json.timestamp }}",
+            "Name": "={{ $json.name }}",
+            "Department": "={{ $json.department }}",
+            "Favorite Part": "={{ $json.favoritePart }}",
+            "Overall Rating": "={{ $json.overallRating }}",
+            "Sentiment": "={{ $json.sentiment }}",
+            "Emotion": "={{ $json.emotion }}",
+            "Priority": "={{ $json.priority }}",
+            "Key Insight": "={{ $json.key_insight }}",
+            "Recommendation": "={{ $json.recommendation }}",
+            "Improvements": "={{ $json.improvements }}"
+          },
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Department",
+              "displayName": "Department",
+              "required": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Favorite Part",
+              "displayName": "Favorite Part",
+              "required": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Overall Rating",
+              "displayName": "Overall Rating",
+              "required": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Emotion",
+              "displayName": "Emotion",
+              "required": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Key Insight",
+              "displayName": "Key Insight",
+              "required": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Recommendation",
+              "displayName": "Recommendation",
+              "required": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Improvements",
+              "displayName": "Improvements",
+              "required": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "matchingColumns": []
+        },
+        "options": {}
+      },
+      "id": "a44544ee-80d9-4fe9-aa81-db2a16ab5ed7",
+      "name": "Append Bad Review",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1024,
+        576
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4Nfjze301YnhW7M3",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "12AwwWxwSuiZKAcnaYM-wCIyq4dU4x7vWfSNWSy5CtSY",
+          "mode": "list",
+          "cachedResultName": "Testimonials Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/12AwwWxwSuiZKAcnaYM-wCIyq4dU4x7vWfSNWSy5CtSY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/12AwwWxwSuiZKAcnaYM-wCIyq4dU4x7vWfSNWSy5CtSY/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $json.timestamp }}",
+            "Name": "={{ $json.name }}",
+            "Department": "={{ $json.department }}",
+            "Favorite Part": "={{ $json.favoritePart }}",
+            "One Word": "={{ $json.oneWord }}",
+            "Overall Rating": "={{ $json.overallRating }}",
+            "Sentiment": "={{ $json.sentiment }}",
+            "Emotion": "={{ $json.emotion }}",
+            "Key Insight": "={{ $json.key_insight }}",
+            "Testimonial": "={{ $json.testimonial }}"
+          },
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Department",
+              "displayName": "Department",
+              "required": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Favorite Part",
+              "displayName": "Favorite Part",
+              "required": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "One Word",
+              "displayName": "One Word",
+              "required": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Overall Rating",
+              "displayName": "Overall Rating",
+              "required": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Emotion",
+              "displayName": "Emotion",
+              "required": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Key Insight",
+              "displayName": "Key Insight",
+              "required": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Testimonial",
+              "displayName": "Testimonial",
+              "required": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "matchingColumns": []
+        },
+        "options": {}
+      },
+      "id": "4c843cc5-5e45-410a-8030-e15c642a4e60",
+      "name": "Append Good Review",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1024,
+        192
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9pSlEkIW5oIGNiJp",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nlet rows = \"\";\nfor (const it of items) {\n  const j = it.json;\n  const quote = j.testimonial ? `<br/><i>&ldquo;${j.testimonial}&rdquo;</i>` : \"\";\n  rows += `<li><b>${j.name}</b> — ${j.key_insight}${quote}</li>`;\n}\nconst html = `<h2>Positive Reviews (${items.length})</h2><ul>${rows}</ul>`;\nreturn [{ json: { html, count: items.length } }];"
+      },
+      "id": "6caff3d5-e3c2-4fe3-8890-2adb4d3d5264",
+      "name": "Build Positive Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "arunbhutiya270@gmail.com",
+        "subject": "=Positive Reviews Summary — {{ $json.count }} this run",
+        "message": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "82707d88-e7e1-41fd-92c3-8f36f410c947",
+      "name": "Send Positive Summary",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1248,
+        384
+      ],
+      "webhookId": "01a1eb83-08c9-44eb-a6a8-11dee24e7587",
+      "executeOnce": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "2Dqc0ESiwaOoiHOd",
+          "name": "Gmail account 2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "New Feedback Row": {
+      "main": [
+        [
+          {
+            "node": "Analyze Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Feedback": {
+      "main": [
+        [
+          {
+            "node": "Combine Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Analyze Feedback",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Feedback Schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Analyze Feedback",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Analysis": {
+      "main": [
+        [
+          {
+            "node": "Actionable (not Low)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Positive Reviews",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Negative Reviews",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actionable (not Low)": {
+      "main": [
+        [
+          {
+            "node": "Send Alert Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Positive Reviews": {
+      "main": [
+        [
+          {
+            "node": "Append Good Review",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build Positive Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Negative Reviews": {
+      "main": [
+        [
+          {
+            "node": "Append Bad Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Positive Summary": {
+      "main": [
+        [
+          {
+            "node": "Send Positive Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "41a1480eaebe03df7b3609e21f36c9223440ee41433b04c323bc869d1080dd9d"
+  }
+}
